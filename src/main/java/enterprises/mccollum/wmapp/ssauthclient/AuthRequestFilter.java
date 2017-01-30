@@ -32,8 +32,9 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 		try {
 			Cipher cipher = Cipher.getInstance("RSA/ECB/NoPadding");
 			cipher.init(Cipher.ENCRYPT_MODE, (RSAPublicKey) pks.getPublicKey());
-			byte[] verifiedToken = cipher.doFinal(userTokenCt.getBytes("UTF8"));
-			byte[] readableToken = (new Base64.Encoder()).encode(verifiedToken);
+			byte[] tokenCb = Base64.getDecoder().decode(userTokenCt); //decode base64 encoded string into the appropriate bytes
+			byte[] userTokenPb = cipher.doFinal(tokenCb);
+			userTokenPt = //bytes to string
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
