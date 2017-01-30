@@ -1,3 +1,6 @@
 [submodule "src/main/java/enterprises/mccollum/wmapp/authobjects"]
 	path = src/main/java/enterprises/mccollum/wmapp/authobjects
 	url = http://gitlab.wmapp.mccollum.enterprises/smccollum/authobjects.git
+[submodule "src/main/java/enterprises/mccollum/utils/genericentityejb"]
+	path = src/main/java/enterprises/mccollum/utils/genericentityejb
+	url = https://github.com/kg6zvp/genericentityejb.git
