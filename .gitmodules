@@ -1,0 +1,3 @@
+[submodule "src/main/java/enterprises/mccollum/wmapp/authobjects"]
+	path = src/main/java/enterprises/mccollum/wmapp/authobjects
+	url = http://gitlab.wmapp.mccollum.enterprises/smccollum/authobjects.git
