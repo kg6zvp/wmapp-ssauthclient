@@ -7,6 +7,9 @@ import java.security.Signature;
 import java.util.Base64;
 
 import javax.inject.Inject;
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.ResourceInfo;
@@ -20,12 +23,16 @@ import com.google.gson.JsonSyntaxException;
 
 import enterprises.mccollum.wmapp.authobjects.UserGroup;
 import enterprises.mccollum.wmapp.authobjects.UserToken;
+import enterprises.mccollum.wmapp.authobjects.UserTokenBean;
 
 @Provider
 public class AuthRequestFilter implements ContainerRequestFilter{
 
 	@Inject
 	PublicKeySingleton pks;
+	
+	@Inject
+	UserTokenBean tokenBean;
 	
 	@Context
 	ResourceInfo resourceInfo;
@@ -62,7 +69,7 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 		String signatureB64 = requestContext.getHeaderString(UserToken.SIGNATURE_HEADER);
 
 		if(!validateTokenSig(requestContext, tokenString, signatureB64)){
-			abort(requestContext);
+			abort(requestContext, Status.NOT_ACCEPTABLE, "Invalid token signature");
 			return;
 		}
 		UserToken token = null;
@@ -70,19 +77,36 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 			Gson gson = new Gson();
 			token = gson.fromJson(tokenString, UserToken.class);
 		}catch(JsonSyntaxException e){
-			abort(requestContext); //if we can't instantiate an object, get out
+			abort(requestContext, Status.NOT_ACCEPTABLE, "Unable to instantiate an instance of the token object from the provided json; your token isn't a token"); //if we can't instantiate an object, get out
 			return;
 		}
 		
 		if(token.getExpirationDate() <= System.currentTimeMillis()){ //check expiration date
-			abort(requestContext); //it's expired already
+			abort(requestContext, Status.UNAUTHORIZED, "Token expired"); //it's expired already
+			return;
+		}
+		
+		if(isBlacklisted(token)){
+			abort(requestContext, Status.UNAUTHORIZED, "Token is blacklisted");
 			return;
 		}
 		
 		if(!checkAuthorization(token)){
-			abort(requestContext);
+			abort(requestContext, Status.FORBIDDEN, "EmployeeType not authorized");
 			return;
 		}
+	}
+
+	/**
+	 * Checks the database to see if the token we were given has been blacklisted
+	 * @param token
+	 * @return
+	 */
+	private boolean isBlacklisted(UserToken token) {
+		UserToken dt = tokenBean.get(token.getTokenId());
+		if(dt == null)
+			return false;
+		return dt.getBlacklisted();
 	}
 
 	private boolean checkAuthorization(UserToken token) {
@@ -126,7 +150,11 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 		return false;
 	}
 
-	private void abort(ContainerRequestContext requestContext) {
-		requestContext.abortWith(Response.status(Status.UNAUTHORIZED).build());
+	private void abort(ContainerRequestContext ctx, Status statusCode, JsonObject entity){
+		ctx.abortWith(Response.status(statusCode).entity(entity).build());
+	}
+	private void abort(ContainerRequestContext requestContext, Status statusCode, String msg) {
+		JsonObject entity = Json.createObjectBuilder().add("reason", msg).build();
+		abort(requestContext, statusCode, entity);
 	}
 }
