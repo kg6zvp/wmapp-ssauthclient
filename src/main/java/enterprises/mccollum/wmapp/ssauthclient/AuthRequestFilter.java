@@ -3,25 +3,25 @@ package enterprises.mccollum.wmapp.ssauthclient;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.nio.charset.StandardCharsets;
+import java.security.Principal;
 import java.security.Signature;
 import java.util.Base64;
 
 import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.ResourceInfo;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.ext.Provider;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
-import enterprises.mccollum.wmapp.authobjects.UserGroup;
 import enterprises.mccollum.wmapp.authobjects.UserToken;
 import enterprises.mccollum.wmapp.authobjects.UserTokenBean;
 
@@ -60,8 +60,8 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 	
 	@Override
 	public void filter(ContainerRequestContext requestContext) throws IOException {
-		if(resourceInfo.getResourceClass().getAnnotation(WestmontOnly.class) == null
-				&& resourceInfo.getResourceMethod().getAnnotation(WestmontOnly.class) == null)
+		if(resourceInfo.getResourceClass().getAnnotation(EmployeeTypesOnly.class) == null
+				&& resourceInfo.getResourceMethod().getAnnotation(EmployeeTypesOnly.class) == null)
 			return; //if the class and method don't care about being secured, we don't either
 		
 		String tokenString = requestContext.getHeaderString(UserToken.TOKEN_HEADER);
@@ -72,7 +72,7 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 			abort(requestContext, Status.NOT_ACCEPTABLE, "Invalid token signature");
 			return;
 		}
-		UserToken token = null;
+		final UserToken token;
 		try{
 			Gson gson = new Gson();
 			token = gson.fromJson(tokenString, UserToken.class);
@@ -95,6 +95,28 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 			abort(requestContext, Status.FORBIDDEN, "EmployeeType not authorized");
 			return;
 		}
+		
+		requestContext.setSecurityContext(new SecurityContext() {
+			@Override
+			public boolean isUserInRole(String role) {
+				return token.getEmployeeType().equals(role);
+			}
+			
+			@Override
+			public boolean isSecure() {
+				return true;
+			}
+			
+			@Override
+			public Principal getUserPrincipal() {
+				return new WMPrincipal(token);
+			}
+			
+			@Override
+			public String getAuthenticationScheme() {
+				return null;
+			}
+		});
 	}
 
 	/**
@@ -120,7 +142,7 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 		if(eTypeAnno != null){
 			boolean pass = false;
 			for(String et : eTypeAnno.value()){
-				if(et.equals(token.getEmployeeType()))
+				if(et.equals("*") || et.equals(token.getEmployeeType()))
 					pass = true;
 			}
 			if(!pass)
@@ -140,14 +162,6 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 			}
 		}//*/
 		return true;
-	}
-
-	private boolean userInGroup(UserToken token, String gName) {
-		for(UserGroup group : token.getGroups()){
-			if(group.getName().equals(gName))
-				return true;
-		}
-		return false;
 	}
 
 	private void abort(ContainerRequestContext ctx, Status statusCode, JsonObject entity){

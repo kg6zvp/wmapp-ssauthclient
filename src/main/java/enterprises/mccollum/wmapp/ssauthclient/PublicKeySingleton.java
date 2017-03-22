@@ -20,7 +20,7 @@ public class PublicKeySingleton {
 	 */
 	PublicKey pubKey;
 	
-	public static final String KEYSTORE_PATH = "/home/smccollum/wmks.jks";
+	public static final String KEYSTORE_PATH = System.getenv("WMKS_PUBKEY_FILE");
 	private static final char[] KEYSTORE_PASS = "password".toCharArray();
 	
 	public static final String KEY_ALIAS = "WMAUTH";
