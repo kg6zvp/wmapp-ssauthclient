@@ -6,7 +6,7 @@
 		<class>enterprises.mccollum.wmapp.authobjects.UserToken</class>
 		<class>enterprises.mccollum.wmapp.authobjects.InvalidationSubscription</class>
 		<properties>
-			<property name="hbm2ddl.auto" value="update"/>
+			<property name="hibernate.hbm2ddl.auto" value="update"/>
 			<property name="hibernate.hbm2ddl.import_files_sql_extractor" value="org.hibernate.tool.hbm2ddl.MultipleLinesSqlCommandExtractor" />
 		</properties>
 	</persistence-unit>

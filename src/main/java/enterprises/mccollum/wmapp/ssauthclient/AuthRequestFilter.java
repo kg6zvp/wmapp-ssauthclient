@@ -22,6 +22,7 @@ import javax.ws.rs.ext.Provider;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
+import enterprises.mccollum.wmapp.authobjects.TestUser;
 import enterprises.mccollum.wmapp.authobjects.UserToken;
 import enterprises.mccollum.wmapp.authobjects.UserTokenBean;
 
@@ -109,7 +110,7 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 			
 			@Override
 			public Principal getUserPrincipal() {
-				return new WMPrincipal(token);
+				return new WMPrincipal(token, signatureB64);
 			}
 			
 			@Override
@@ -142,7 +143,7 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 		if(eTypeAnno != null){
 			boolean pass = false;
 			for(String et : eTypeAnno.value()){
-				if(et.equals("*") || et.equals(token.getEmployeeType()))
+				if( (et.equals("*") && !token.getEmployeeType().equals(TestUser.EMPLOYEE_TYPE)) || et.equals(token.getEmployeeType()))
 					pass = true;
 			}
 			if(!pass)
