@@ -17,8 +17,11 @@ Add the maven dependency to your project: (If you don't know what we're talking 
 </dependency>
 ~~~~
 
-Add a `<jar-file/>` declaration to your persistence.xml file:
-The line should look like: `<jar-file>lib/ssauthclient-0.0.2-SNAPSHOT.jar</jar-file>`
+Add a `<class/>` declaration to your persistence.xml file for each of the classes used:
+The lines should look like: `<class>enterprises.mccollum.wmapp.authobjects.DomainUser</class>`
+`<class>enterprises.mccollum.wmapp.authobjects.UserGroup</class>`
+`<class>enterprises.mccollum.wmapp.authobjects.UserToken</class>`
+`<class>enterprises.mccollum.wmapp.authobjects.InvalidationSubscription</class>`
 
 Once included in the file, your persistence.xml file may look like this:
 
@@ -26,9 +29,12 @@ Once included in the file, your persistence.xml file may look like this:
 <?xml version="1.0" encoding="UTF-8"?>
 <persistence version="2.1" xmlns="http://xmlns.jcp.org/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence http://xmlns.jcp.org/xml/ns/persistence/persistence_2_1.xsd">
     <persistence-unit name="sampleservice">
-        <jar-file>lib/ssauthclient-0.0.2-SNAPSHOT.jar</jar-file>
+		<class>enterprises.mccollum.wmapp.authobjects.DomainUser</class>
+		<class>enterprises.mccollum.wmapp.authobjects.UserGroup</class>
+		<class>enterprises.mccollum.wmapp.authobjects.UserToken</class>
+		<class>enterprises.mccollum.wmapp.authobjects.InvalidationSubscription</class>
         <properties>
-            <property name="hbm2ddl.auto" value="update"/>
+			<property name="hibernate.hbm2ddl.auto" value="update"/>
             <property name="hibernate.hbm2ddl.import_files_sql_extractor" value="org.hibernate.tool.hbm2ddl.MultipleLinesSqlCommandExtractor" />
         </properties>
     </persistence-unit>
@@ -81,7 +87,7 @@ public class SampleService {
 }
 ~~~~
 
-### Add environment variable to the container you will be deploying in
+### (OPTIONAL) Add environment variable to the container you will be deploying in
 
 The environment your java container server is being deployed in must contain the variable `WMKS_PUBKEY_FILE` which contains the complete path of the java keystore file containing the key with alias `WMAUTH` secured with the password `password`
 

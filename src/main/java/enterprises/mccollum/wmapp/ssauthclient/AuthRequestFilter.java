@@ -6,6 +6,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.security.Signature;
 import java.util.Base64;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.inject.Inject;
 import javax.json.Json;
@@ -22,7 +24,6 @@ import javax.ws.rs.ext.Provider;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
-import enterprises.mccollum.wmapp.authobjects.TestUser;
 import enterprises.mccollum.wmapp.authobjects.UserToken;
 import enterprises.mccollum.wmapp.authobjects.UserTokenBean;
 
@@ -65,6 +66,8 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 				&& resourceInfo.getResourceMethod().getAnnotation(EmployeeTypesOnly.class) == null)
 			return; //if the class and method don't care about being secured, we don't either
 		
+		Logger.getLogger(SSAuthClient.SUBSYSTEM_NAME).log(Level.INFO, "JAX-RS authentication filter invoked");
+		
 		String tokenString = requestContext.getHeaderString(UserToken.TOKEN_HEADER);
 		
 		String signatureB64 = requestContext.getHeaderString(UserToken.SIGNATURE_HEADER);
@@ -88,7 +91,11 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 		}
 		
 		if(isBlacklisted(token)){
-			abort(requestContext, Status.UNAUTHORIZED, "Token is blacklisted");
+			if(token.getBlacklisted()){ //if the token passed to the endpoint was marked as blacklisted
+				abort(requestContext, Status.OK, "Token blacklisted successfully");
+			}else{
+				abort(requestContext, Status.UNAUTHORIZED, "Token is blacklisted");
+			}
 			return;
 		}
 		
@@ -100,6 +107,7 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 		requestContext.setSecurityContext(new SecurityContext() {
 			@Override
 			public boolean isUserInRole(String role) {
+				//TODO: Move this into true roles instead of employeeType checking
 				return token.getEmployeeType().equals(role);
 			}
 			
@@ -126,10 +134,14 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 	 * @return
 	 */
 	private boolean isBlacklisted(UserToken token) {
-		UserToken dt = tokenBean.get(token.getTokenId());
-		if(dt == null)
-			return false;
-		return dt.getBlacklisted();
+		UserToken dt = tokenBean.getByTokenId(token.getTokenId());
+		if(dt == null){ //If the token wasn't found in the database
+			if(token.getBlacklisted())
+				tokenBean.save(token); //save token to database so that it will show as blacklisted in future
+			return token.getBlacklisted();
+		}
+		System.out.println("Token found: "+new Gson().toJson(dt));
+		return dt.getBlacklisted(); //if the token was found in the database, we'll reach here and will trust the database over the token itself
 	}
 
 	private boolean checkAuthorization(UserToken token) {
@@ -143,7 +155,7 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 		if(eTypeAnno != null){
 			boolean pass = false;
 			for(String et : eTypeAnno.value()){
-				if( (et.equals("*") && !token.getEmployeeType().equals(TestUser.EMPLOYEE_TYPE)) || et.equals(token.getEmployeeType()))
+				if( (et.equals("*") && !token.getEmployeeType().equals(SSAuthClient.TEST_EMPLOYEETYPE)) || et.equals(token.getEmployeeType()))
 					pass = true;
 			}
 			if(!pass)
