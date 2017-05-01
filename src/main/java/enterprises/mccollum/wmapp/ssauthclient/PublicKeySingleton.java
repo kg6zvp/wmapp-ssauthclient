@@ -8,6 +8,8 @@ import java.security.KeyStore;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.Lock;
@@ -46,9 +48,12 @@ public class PublicKeySingleton {
 	public void init(){
 		try {
 			pubKey = loadPubKey();
-			System.out.println("Loaded publicKey successfully");
+			if(pubKey != null){
+				Logger.getLogger(SSAuthClient.SUBSYSTEM_NAME).log(Level.INFO, "Loaded publicKey successfully");
+				return;
+			}
 		} catch (Exception e) {
-			System.out.print("Honestly, I'm just sick of this at this point. I've been coding for hours trying to eliminate errors and this is what happens. I don't know what went wrong. Try checking line 61 of the file PublicKeySingleton.java to see what's up here.\n");
+			Logger.getLogger(SSAuthClient.SUBSYSTEM_NAME).log(Level.SEVERE, "Honestly, I'm just sick of this at this point. I've been coding for hours trying to eliminate errors and this is what happens. I don't know what went wrong. Try checking line 61 of the file PublicKeySingleton.java to see what's up here.\n");
 			e.printStackTrace();
 		}
 	}
@@ -64,14 +69,14 @@ public class PublicKeySingleton {
 		if(keystorePath != null){ //if the keystore can be read
 			KeyStore ks = readKeyStore(keystorePath);
 			Certificate cer = ks.getCertificate(KEY_ALIAS); //get public key, part I
-			System.out.println("Read from "+keystorePath+" successfully");
+			Logger.getLogger(SSAuthClient.SUBSYSTEM_NAME).log(Level.INFO, "Read from "+keystorePath+" successfully");
 			return cer.getPublicKey();
 		}else{
 			PemObject pemPubKey = ldPemFromServer();
 			if(pemPubKey != null){
 				KeyFactory kf = KeyFactory.getInstance("RSA", BouncyCastleProvider.PROVIDER_NAME);
 				PublicKey lPubKey =  kf.generatePublic(new X509EncodedKeySpec(pemPubKey.getContent()));
-				System.out.println("Read public key from url successfully");
+				Logger.getLogger(SSAuthClient.SUBSYSTEM_NAME).log(Level.INFO, "Read public key from url successfully");
 				return lPubKey;
 			}else{
 				//TODO: fallback to reading pem file

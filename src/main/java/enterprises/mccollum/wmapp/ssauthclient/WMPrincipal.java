@@ -13,11 +13,13 @@ import enterprises.mccollum.wmapp.authobjects.UserToken;
  */
 public class WMPrincipal implements Principal {
 	private UserToken token;
+	private String tokenString;
 	private String tokenSignature;
 	
 	public WMPrincipal() {}
-	public WMPrincipal(UserToken token, String tokenSignature){
+	public WMPrincipal(UserToken token, String tokenString, String tokenSignature){
 		setToken(token);
+		setTokenString(tokenString);
 		setTokenSignature(tokenSignature);
 	}
 	
@@ -41,5 +43,11 @@ public class WMPrincipal implements Principal {
 	}
 	public void setTokenSignature(String tokenSignature) {
 		this.tokenSignature = tokenSignature;
+	}
+	public String getTokenString() {
+		return tokenString;
+	}
+	public void setTokenString(String tokenString) {
+		this.tokenString = tokenString;
 	}
 }

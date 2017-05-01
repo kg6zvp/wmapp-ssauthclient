@@ -56,24 +56,25 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return false;
 		}
 		return true;
 	}
 	
 	@Override
 	public void filter(ContainerRequestContext requestContext) throws IOException {
-		if(resourceInfo.getResourceClass().getAnnotation(EmployeeTypesOnly.class) == null
-				&& resourceInfo.getResourceMethod().getAnnotation(EmployeeTypesOnly.class) == null)
-			return; //if the class and method don't care about being secured, we don't either
+		boolean filter = (resourceInfo.getResourceClass().getAnnotation(EmployeeTypesOnly.class) != null
+						|| resourceInfo.getResourceMethod().getAnnotation(EmployeeTypesOnly.class) != null);
 		
 		Logger.getLogger(SSAuthClient.SUBSYSTEM_NAME).log(Level.INFO, "JAX-RS authentication filter invoked");
 		
-		String tokenString = requestContext.getHeaderString(UserToken.TOKEN_HEADER);
+		final String tokenString = requestContext.getHeaderString(UserToken.TOKEN_HEADER);
 		
-		String signatureB64 = requestContext.getHeaderString(UserToken.SIGNATURE_HEADER);
+		final String signatureB64 = requestContext.getHeaderString(UserToken.SIGNATURE_HEADER);
 
 		if(!validateTokenSig(requestContext, tokenString, signatureB64)){
-			abort(requestContext, Status.NOT_ACCEPTABLE, "Invalid token signature");
+			if(filter)
+				abort(requestContext, Status.NOT_ACCEPTABLE, "Invalid token signature");
 			return;
 		}
 		final UserToken token;
@@ -81,16 +82,18 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 			Gson gson = new Gson();
 			token = gson.fromJson(tokenString, UserToken.class);
 		}catch(JsonSyntaxException e){
-			abort(requestContext, Status.NOT_ACCEPTABLE, "Unable to instantiate an instance of the token object from the provided json; your token isn't a token"); //if we can't instantiate an object, get out
+			if(filter)
+				abort(requestContext, Status.NOT_ACCEPTABLE, "Unable to instantiate an instance of the token object from the provided json; your token isn't a token"); //if we can't instantiate an object, get out
 			return;
 		}
 		
 		if(token.getExpirationDate() <= System.currentTimeMillis()){ //check expiration date
-			abort(requestContext, Status.UNAUTHORIZED, "Token expired"); //it's expired already
+			if(filter)
+				abort(requestContext, Status.UNAUTHORIZED, "Token expired"); //it's expired already
 			return;
 		}
 		
-		if(isBlacklisted(token)){
+		if(isBlacklisted(token) && filter){
 			if(token.getBlacklisted()){ //if the token passed to the endpoint was marked as blacklisted
 				abort(requestContext, Status.OK, "Token blacklisted successfully");
 			}else{
@@ -118,7 +121,7 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 			
 			@Override
 			public Principal getUserPrincipal() {
-				return new WMPrincipal(token, signatureB64);
+				return new WMPrincipal(token, tokenString, signatureB64);
 			}
 			
 			@Override
@@ -162,18 +165,6 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 				return false;
 		}
 		
-		/*NO NEED FOR THIS BLOCK RIGHT NOW
-		UserGroupsOnly ugAnno = null;
-		if((temp = resourceInfo.getResourceMethod().getAnnotation(UserGroupsOnly.class)) != null)
-			ugAnno = (UserGroupsOnly) temp;
-		else if((temp = resourceInfo.getResourceClass().getAnnotation(UserGroupsOnly.class)) != null)
-			ugAnno = (UserGroupsOnly) temp;
-		if(ugAnno != null){
-			for(String gName : ugAnno.value()){
-				if(!userInGroup(token, gName))
-					return false;
-			}
-		}//*/
 		return true;
 	}
 
