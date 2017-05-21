@@ -65,8 +65,7 @@ public class PublicKeySingleton {
 	
 	private PublicKey loadPubKey() throws Exception{
 		keystorePath = System.getenv("WMKS_PUBKEY_FILE");
-		keystorePath = null;
-		if(keystorePath != null){ //if the keystore can be read
+		if(keystorePath != null && keystorePath.length() > 0){ //if the keystore can be read
 			KeyStore ks = readKeyStore(keystorePath);
 			Certificate cer = ks.getCertificate(KEY_ALIAS); //get public key, part I
 			Logger.getLogger(SSAuthClient.SUBSYSTEM_NAME).log(Level.INFO, "Read from "+keystorePath+" successfully");

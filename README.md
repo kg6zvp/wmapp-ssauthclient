@@ -12,7 +12,7 @@ Add the maven dependency to your project: (If you don't know what we're talking 
 <dependency>
 	<groupId>enterprises.mccollum.wmapp</groupId>
 	<artifactId>ssauthclient</artifactId>
-	<version>0.0.2-SNAPSHOT</version>
+	<version>1.0.3</version>
 	<scope>compile</scope>
 </dependency>
 ~~~~

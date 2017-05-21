@@ -87,13 +87,23 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 			return;
 		}
 		
+		//check against reuse of already expired token
+		UserToken dbToken = null;
+		if( (dbToken = tokenBean.getByTokenId(token.getTokenId())) != null){ //if we have a token matching it in the database
+			if(dbToken.getExpirationDate() > token.getExpirationDate()){ //if the token is an old one
+				if(filter)
+					abort(requestContext, Status.UNAUTHORIZED, "Use of an old token not permitted");
+				return; //peace out so we don't save the bad token to the SecurityContext
+			}
+		}
+		
 		if(token.getExpirationDate() <= System.currentTimeMillis()){ //check expiration date
 			if(filter)
 				abort(requestContext, Status.UNAUTHORIZED, "Token expired"); //it's expired already
 			return;
 		}
 		
-		if(isBlacklisted(token) && filter){
+		if(isBlacklisted(dbToken, token) && filter){
 			if(token.getBlacklisted()){ //if the token passed to the endpoint was marked as blacklisted
 				abort(requestContext, Status.OK, "Token blacklisted successfully");
 			}else{
@@ -133,11 +143,12 @@ public class AuthRequestFilter implements ContainerRequestFilter{
 
 	/**
 	 * Checks the database to see if the token we were given has been blacklisted
-	 * @param token
+	 * @param dt: Token taken from the database (so we don't have to run the same query again)
+	 * @param token: Token provided in the Token header
 	 * @return
 	 */
-	private boolean isBlacklisted(UserToken token) {
-		UserToken dt = tokenBean.getByTokenId(token.getTokenId());
+	private boolean isBlacklisted(UserToken dt, UserToken token) {
+		//UserToken dt = tokenBean.getByTokenId(token.getTokenId());
 		if(dt == null){ //If the token wasn't found in the database
 			if(token.getBlacklisted())
 				tokenBean.save(token); //save token to database so that it will show as blacklisted in future
