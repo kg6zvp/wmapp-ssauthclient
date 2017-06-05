@@ -17,6 +17,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import enterprises.mccollum.ssauthclient.JWTReaderUtils;
+import enterprises.mccollum.ssauthclient.URLContextUtils;
 import enterprises.mccollum.ssauthclient.URLStateUtils;
 import enterprises.mccollum.wmapp.authobjects.UserToken;
 
@@ -34,6 +35,9 @@ public class LoginFilter implements Filter {
 	
 	@Inject
 	URLStateUtils urlStateUtils;
+	
+	@Inject
+	URLContextUtils urlCtxUtils;
 	
 	String loginURL;
 	
@@ -69,8 +73,9 @@ public class LoginFilter implements Filter {
 		/*
 		 * Determing whether it's the login url
 		 */
-		logf(Level.INFO, "RequestURI: %s", req.getRequestURI());
-		boolean isLoginUrl = req.getRequestURI().startsWith(loginURL) && !(req.getRequestURI().contains("/../"));
+		String requestUri = req.getRequestURI().replace(req.getContextPath(), "");
+		logf(Level.INFO, "RequestURI: %s", requestUri);
+		boolean isLoginUrl = requestUri.startsWith(loginURL) && !(requestUri.contains("/../"));
 		logf(Level.INFO, "isLoginUrl: %b", isLoginUrl);
 		
 		Object sessionPrincipal = session.getAttribute(SSAuthClient.PRINCIPAL_SESSION_ATTRIBUTE);
@@ -148,7 +153,7 @@ public class LoginFilter implements Filter {
 			chain.doFilter(req, res);
 		}else{ //if they're not logged in and not headed for the login url
 			//String urlToParams = req.getRequestURL().toString()+getParameterString(req.getParameterMap());
-			String redirectURL = String.format("%s?%s=%s", loginURL, "after", urlStateUtils.encodeRequestUrlToParam(req));
+			String redirectURL = String.format("%s?%s=%s", urlCtxUtils.getApplicationBaseUrl(req)+loginURL, "after", urlStateUtils.encodeRequestUrlToParam(req));
 			res.sendRedirect(redirectURL);
 		}
 	}

@@ -6,6 +6,7 @@ import java.util.Base64;
 
 import javax.ejb.Local;
 import javax.ejb.Stateless;
+import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -17,6 +18,9 @@ import javax.servlet.http.HttpServletRequest;
 public class URLStateUtils {
 	static final Charset CHARSET = StandardCharsets.UTF_8;
 	
+	@Inject
+	URLContextUtils urlCtxUtils;
+	
 	public URLStateUtils(){}
 	
 	/**
@@ -25,7 +29,9 @@ public class URLStateUtils {
 	 * @return
 	 */
 	public String encodeRequestUrlToParam(HttpServletRequest req){
-		StringBuilder urlBuilder = new StringBuilder(req.getRequestURL());
+		//StringBuilder urlBuilder = new StringBuilder(req.getRequestURL());
+		String requestUri = req.getRequestURI().replace(req.getContextPath(), "");
+		StringBuilder urlBuilder = new StringBuilder(urlCtxUtils.getApplicationBaseUrl(req)+requestUri);
 		if(req.getQueryString() != null)
 			urlBuilder.append("?"+req.getQueryString());
 		return Base64.getUrlEncoder().withoutPadding().encodeToString(urlBuilder.toString().getBytes(CHARSET));
