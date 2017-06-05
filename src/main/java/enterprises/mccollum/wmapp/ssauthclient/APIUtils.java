@@ -10,10 +10,6 @@ import javax.json.JsonObjectBuilder;
 @Stateless
 public class APIUtils {
 
-	/**
-	 * @param msg
-	 * @return
-	 */
 	public JsonObject mkErrorEntity(String msg){
 		return mkSingleResponseObject("error", msg);
 	}

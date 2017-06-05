@@ -3,6 +3,8 @@ package enterprises.mccollum.wmapp.ssauthclient;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.StringReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.security.KeyFactory;
 import java.security.KeyStore;
 import java.security.PublicKey;
@@ -15,7 +17,6 @@ import javax.annotation.PostConstruct;
 import javax.ejb.Lock;
 import javax.ejb.LockType;
 import javax.ejb.Singleton;
-import javax.ejb.Startup;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 
@@ -29,7 +30,6 @@ import org.bouncycastle.util.io.pem.PemReader;
  *
  */
 @Singleton
-@Startup
 public class PublicKeySingleton {
 	/**
 	 * This key will contain the public and private keys used to sign content for auth
@@ -42,7 +42,13 @@ public class PublicKeySingleton {
 	public static final String KEY_ALIAS = "WMAUTH";
 	//private static final char[] KEY_PASS = "password".toCharArray();
 
-	private static final String AUTH_SERVER_PUBKEY_URL = "http://auth.wmapp.mccollum.enterprises/api/key/getPubKey";
+	private static final String AUTH_SERVER_URL_LOCAL = "http://localhost:8080/loginserver";
+	private static final String AUTH_SERVER_URL_REMOTE = "http://wmapp.mccollum.enterprises/loginserver";
+	
+	private static final String PUBKEY_RELATIVE_URL = "/api/key/getPubKey";
+	private static final String AUTH_SERVER_PUBKEY_URL_LOCAL = AUTH_SERVER_URL_LOCAL+PUBKEY_RELATIVE_URL;
+	private static final String AUTH_SERVER_PUBKEY_URL_REMOTE = AUTH_SERVER_URL_REMOTE+PUBKEY_RELATIVE_URL;
+	
 	
 	@PostConstruct
 	public void init(){
@@ -78,7 +84,7 @@ public class PublicKeySingleton {
 				Logger.getLogger(SSAuthClient.SUBSYSTEM_NAME).log(Level.INFO, "Read public key from url successfully");
 				return lPubKey;
 			}else{
-				//TODO: fallback to reading pem file
+				//TODO: fallback to reading pem file (location not yet specified)
 			}
 		}
 		return null;
@@ -86,7 +92,16 @@ public class PublicKeySingleton {
 	
 	private PemObject ldPemFromServer() {
 		Client c = ClientBuilder.newClient();
-		String pemString = c.target(AUTH_SERVER_PUBKEY_URL).request().get(String.class);
+		String pemString = null;
+		if(canTargetLocal()){ //local login server
+			SSAuthClient.authServerUrl = AUTH_SERVER_URL_LOCAL;
+			Logger.getLogger(SSAuthClient.SUBSYSTEM_NAME).log(Level.INFO, "Using localhost as login server");
+			pemString = c.target(AUTH_SERVER_PUBKEY_URL_LOCAL).request().get(String.class);
+		}else{ //remote login server
+			SSAuthClient.authServerUrl = AUTH_SERVER_URL_REMOTE;
+			Logger.getLogger(SSAuthClient.SUBSYSTEM_NAME).log(Level.INFO, "Using remote server as login server");
+			pemString = c.target(AUTH_SERVER_PUBKEY_URL_REMOTE).request().get(String.class);
+		}
 		@SuppressWarnings("resource") //It's clearly being used
 		PemReader pemReader = new PemReader(new StringReader(pemString));
 		try {
@@ -95,6 +110,26 @@ public class PublicKeySingleton {
 			e.printStackTrace();
 		}
 		return null;
+	}
+
+	/**
+	 * Tries to connect to itself a bunch of times and exits if it's not possible
+	 * @return
+	 */
+	private boolean canTargetLocal() {
+		HttpURLConnection con = null;
+		try {
+			con = (HttpURLConnection) new URL(AUTH_SERVER_PUBKEY_URL_LOCAL).openConnection();
+		} catch (Exception e) {
+			return false;
+		}
+		con.setConnectTimeout(500);
+		try {
+			con.connect();
+		} catch (IOException e) {
+			return false;
+		}
+		return true;
 	}
 
 	private KeyStore readKeyStore(String ksPath) throws Exception{

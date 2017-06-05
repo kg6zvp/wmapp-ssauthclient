@@ -20,7 +20,12 @@ public class SSAuthClient {
 	public static final String SUBSYSTEM_NAME = "SSAuthClient";
 	public static final String TEST_EMPLOYEETYPE = TestUser.EMPLOYEE_TYPE;
 	
+	public static String authServerUrl;
+	
 	Gson gsonWithExclusions;
+	public static final String PRINCIPAL_SESSION_ATTRIBUTE = "sessionPrincipal";
+	
+	public static final String JWT_MEDIA_TYPE = "application/jwt";
 	
 	public SSAuthClient(){
 		gsonWithExclusions = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();

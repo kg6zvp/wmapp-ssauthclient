@@ -33,7 +33,7 @@ public class SSAuthClientEndpoint {
 	 * 
 	 * The URL /ssauthclient/blacklist is appended to the base URL of your Jax-RS project
 	 * 
-	 * @return
+	 * @return Response
 	 */
 	@GET
 	@Path("blacklist")
