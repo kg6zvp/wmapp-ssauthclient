@@ -24,18 +24,25 @@ public class TokenChecker {
 	 */
 	public boolean checkToken(UserToken token){
 		UserToken dbToken = tokenBean.getByTokenId(token.getTokenId());
-		if(dbToken.getBlacklisted())
-			return false;
+		if(dbToken != null && dbToken.getBlacklisted()){
+				return false;
+		}
 		if(token.getBlacklisted()){
-			dbToken.setBlacklisted(true);
-			tokenBean.save(dbToken);
+			if(dbToken != null){
+				dbToken.setBlacklisted(true);
+				tokenBean.save(dbToken);
+			}else{
+				token = tokenBean.save(token);
+			}
 			return false;
 		}
 		/**
 		 * If the supplied token is older than the one in the database, reject it
 		 */
-		if(token.getExpirationDate() < dbToken.getExpirationDate()){
-			return false;
+		if(dbToken != null){
+			if(token.getExpirationDate() < dbToken.getExpirationDate()){
+				return false;
+			}
 		}
 		/**
 		 * If the expiration date for the 
@@ -55,11 +62,16 @@ public class TokenChecker {
 	 */
 	public boolean checkBlacklisted(UserToken token){
 		UserToken dbToken = tokenBean.getByTokenId(token.getTokenId());
-		if(dbToken.getBlacklisted())
-			return false;
+		if(dbToken != null && dbToken.getBlacklisted()){
+				return false;
+		}
 		if(token.getBlacklisted()){
-			dbToken.setBlacklisted(true);
-			tokenBean.save(dbToken);
+			if(dbToken != null){
+				dbToken.setBlacklisted(true);
+				tokenBean.save(dbToken);
+			}else{
+				token = tokenBean.save(token);
+			}
 			return false;
 		}
 		return true;
